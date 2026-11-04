@@ -1,0 +1,427 @@
+-- a)
+-- 1. Начисления, где сотрудник отработал больше 35 часов
+SELECT *
+FROM "Nachislenie"
+WHERE "Количество_часов" > 35;
+
+-- 2. Начисления, где сотрудник отработал меньше 40 часов
+SELECT *
+FROM "Nachislenie"
+WHERE "Количество_часов" < 40;
+
+-- 3. Начисления, где сотрудник отработал ровно 40 часов
+SELECT *
+FROM "Nachislenie"
+WHERE "Количество_часов" = 40;
+
+-- 4. Начисления, где сотрудник отработал от 30 до 50 часов
+SELECT *
+FROM "Nachislenie"
+WHERE "Количество_часов" BETWEEN 30 AND 50;
+
+-- b)
+-- 1. Сотрудники, фамилия которых начинается на «Иван»
+SELECT *
+FROM "Sotrudnik"
+WHERE "ФИО" LIKE 'Иван%';
+
+-- 2. Сотрудники с выбранными должностями
+SELECT s."ФИО", d."Наименование"
+FROM "Sotrudnik" s
+JOIN "Dolzhnost" d
+ON s."id_должности" = d."id_должности"
+WHERE d."Наименование" IN ('Бухгалтер', 'Экономист', 'Менеджер');
+
+-- c)
+-- Расчёт средней ставки за час для каждого вида ставки
+SELECT
+    "id_ставки",
+    "Нижняя_граница",
+    "Верхняя_граница",
+    ("Нижняя_граница" + "Верхняя_граница") / 2 AS "Средняя_ставка"
+FROM "StavkaZaChas";
+
+--d
+-- Вывод сотрудников и названий их должностей
+SELECT
+    s."ФИО",
+    d."Наименование"
+FROM "Sotrudnik" s, "Dolzhnost" d
+WHERE s."id_должности" = d."id_должности";
+
+-- e)
+-- Статистика по количеству отработанных часов
+SELECT
+    AVG("Количество_часов") AS "Среднее_количество_часов",
+    SUM("Количество_часов") AS "Всего_часов",
+    COUNT(*) AS "Количество_начислений",
+    MIN("Количество_часов") AS "Минимум_часов",
+    MAX("Количество_часов") AS "Максимум_часов"
+FROM "Nachislenie";
+
+-- f)
+-- Количество начислений и отработанных часов по каждому сотруднику
+SELECT
+    s."ФИО",
+    COUNT(n."id_начисления") AS "Количество_начислений",
+    SUM(n."Количество_часов") AS "Всего_часов"
+FROM "Sotrudnik" s
+JOIN "Nachislenie" n
+ON s."id_сотрудника" = n."id_сотрудника"
+GROUP BY s."id_сотрудника", s."ФИО";
+
+-- g)
+-- Список сотрудников от самого давно работающего к недавно принятому
+SELECT
+    "ФИО",
+    "Дата_устройства"
+FROM "Sotrudnik"
+ORDER BY "Дата_устройства" ASC;
+
+-- h)
+-- 1. Скалярный подзапрос:
+-- Начисления, в которых часов больше среднего значения
+SELECT *
+FROM "Nachislenie"
+WHERE "Количество_часов" > (
+    SELECT AVG("Количество_часов")
+    FROM "Nachislenie"
+);
+
+
+-- 2. Подзапрос с IN:
+-- Сотрудники, у которых были начисления в апреле 2023 года
+SELECT *
+FROM "Sotrudnik"
+WHERE "id_сотрудника" IN (
+    SELECT "id_сотрудника"
+    FROM "Nachislenie"
+    WHERE "Дата_начисления" >= DATE '2023-04-01'
+      AND "Дата_начисления" < DATE '2023-05-01'
+);
+
+
+-- 3. Коррелированный подзапрос с EXISTS:
+-- Сотрудники, у которых есть начисления с налогом выше среднего
+SELECT s."ФИО"
+FROM "Sotrudnik" s
+WHERE EXISTS (
+    SELECT 1
+    FROM "Nachislenie" n
+    WHERE n."id_сотрудника" = s."id_сотрудника"
+      AND n."Налог" > (
+          SELECT AVG("Налог")
+          FROM "Nachislenie"
+      )
+);
+
+-- i)
+-- Объединение сотрудников с должностями «Бухгалтер» и «Экономист»
+SELECT s."ФИО", d."Наименование"
+FROM "Sotrudnik" s
+JOIN "Dolzhnost" d
+ON s."id_должности" = d."id_должности"
+WHERE d."Наименование" = 'Бухгалтер'
+
+UNION
+
+SELECT s."ФИО", d."Наименование"
+FROM "Sotrudnik" s
+JOIN "Dolzhnost" d
+ON s."id_должности" = d."id_должности"
+WHERE d."Наименование" = 'Экономист';
+
+-- j)
+-- Сотрудники с должностями из первой шестёрки,
+-- у которых также есть начисления
+SELECT "id_сотрудника"
+FROM "Sotrudnik"
+WHERE "id_должности" BETWEEN 1 AND 6
+
+INTERSECT
+
+SELECT "id_сотрудника"
+FROM "Nachislenie";
+
+-- k)
+-- Сотрудники, у которых не было начислений в апреле 2023 года
+SELECT "id_сотрудника"
+FROM "Sotrudnik"
+
+EXCEPT
+
+SELECT "id_сотрудника"
+FROM "Nachislenie"
+WHERE "Дата_начисления" >= DATE '2023-04-01'
+  AND "Дата_начисления" < DATE '2023-05-01';
+
+-- l)
+-- Категории сотрудников по количеству отработанных часов
+SELECT
+    "id_начисления",
+    "Количество_часов",
+    CASE
+        WHEN "Количество_часов" < 30 THEN 'Мало часов'
+        WHEN "Количество_часов" BETWEEN 30 AND 40 THEN 'Среднее количество'
+        ELSE 'Много часов'
+    END AS "Категория"
+FROM "Nachislenie";
+
+-- m)
+-- 1. INNER JOIN
+SELECT
+    s."ФИО",
+    d."Наименование"
+FROM "Sotrudnik" s
+INNER JOIN "Dolzhnost" d
+
+-- 2. LEFT JOIN
+SELECT
+    s."ФИО",
+    d."Наименование"
+FROM "Sotrudnik" s
+LEFT JOIN "Dolzhnost" d
+ON s."id_должности" = d."id_должности";
+
+-- 3. RIGHT JOIN
+SELECT
+    s."ФИО",
+    d."Наименование"
+FROM "Sotrudnik" s
+RIGHT JOIN "Dolzhnost" d
+ON s."id_должности" = d."id_должности";
+
+-- 4. FULL JOIN
+SELECT
+    s."ФИО",
+    d."Наименование"
+FROM "Sotrudnik" s
+FULL JOIN "Dolzhnost" d
+ON s."id_должности" = d."id_должности";
+
+-- 5. CROSS JOIN
+SELECT
+    d."Наименование",
+    t."Название" AS "Вид_льготы"
+FROM "Dolzhnost" d
+CROSS JOIN "TipOsvobozhdenia" t;
+
+-- n)
+-- Добавляем столбец для хранения ID руководителя
+ALTER TABLE "Sotrudnik"
+ADD COLUMN IF NOT EXISTS "id_руководителя" INTEGER;
+
+-- Создаём связь сотрудника с другим сотрудником,
+-- который является его руководителем
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_sotrudnik_rukovoditel'
+    ) THEN
+        ALTER TABLE "Sotrudnik"
+        ADD CONSTRAINT fk_sotrudnik_rukovoditel
+        FOREIGN KEY ("id_руководителя")
+        REFERENCES "Sotrudnik" ("id_сотрудника");
+    END IF;
+END $$;
+-- +
+-- Построение иерархии сотрудников по руководителям
+WITH RECURSIVE "Ierarhiya" AS (
+    -- Начальный уровень: сотрудники без руководителя
+    SELECT
+        "id_сотрудника",
+        "ФИО",
+        "id_руководителя",
+        1 AS "Уровень"
+    FROM "Sotrudnik"
+    WHERE "id_руководителя" IS NULL
+
+    UNION ALL
+
+    -- Следующие уровни: подчинённые найденных сотрудников
+    SELECT
+        s."id_сотрудника",
+        s."ФИО",
+        s."id_руководителя",
+        i."Уровень" + 1
+    FROM "Sotrudnik" s
+    JOIN "Ierarhiya" i
+    ON s."id_руководителя" = i."id_сотрудника"
+)
+SELECT *
+FROM "Ierarhiya"
+ORDER BY "Уровень", "id_сотрудника";
+ON s."id_должности" = d."id_должности";
+
+-- Часть 2. Индивидуальное задание
+-- 1. Расчёт оплаты за выполненную работу
+-- Удаляем старые представления, если они существуют
+-- (сначала зависимые, затем вспомогательное)
+DROP VIEW IF EXISTS "v4_ZarabotokVysheSrednego";
+DROP VIEW IF EXISTS "v4_NalogPoMesyacam";
+DROP VIEW IF EXISTS "v4_Samyj_Staryj_Sotrudnik";
+DROP VIEW IF EXISTS "v4_ZarabotokSotrudnikov";
+DROP VIEW IF EXISTS "v4_VyplatyPoVidamRaboty";
+DROP VIEW IF EXISTS "v4_RaschetOplaty";
+
+-- Вспомогательное представление для расчёта оплаты
+CREATE VIEW "v4_RaschetOplaty" AS
+SELECT
+    n."id_начисления",
+    n."Дата_начисления",
+    n."id_вид_работы",
+    w."Описание" AS "Вид_работы",
+    s."id_сотрудника",
+    s."ФИО",
+    n."Количество_часов",
+
+    -- Определяем ставку в зависимости от стажа на дату начисления
+    CASE
+        WHEN s."Дата_устройства" >
+             n."Дата_начисления" - INTERVAL '1 year'
+        THEN st."Нижняя_граница"
+
+        WHEN s."Дата_устройства" >=
+             n."Дата_начисления" - INTERVAL '5 years'
+        THEN (st."Нижняя_граница" + st."Верхняя_граница") / 2
+
+        ELSE st."Верхняя_граница"
+    END AS "Ставка_за_час",
+
+    -- Рассчитываем выплату
+    ROUND((
+        n."Количество_часов" *
+        CASE
+            WHEN s."Дата_устройства" >
+                 n."Дата_начисления" - INTERVAL '1 year'
+            THEN st."Нижняя_граница"
+
+            WHEN s."Дата_устройства" >=
+                 n."Дата_начисления" - INTERVAL '5 years'
+            THEN (st."Нижняя_граница" + st."Верхняя_граница") / 2
+
+            ELSE st."Верхняя_граница"
+        END
+    )::NUMERIC, 2) AS "Сумма_выплаты",
+
+    n."Налог" AS "Сумма_налога"
+
+FROM "Nachislenie" n
+JOIN "Sotrudnik" s
+    ON n."id_сотрудника" = s."id_сотрудника"
+JOIN "WorkType" w
+    ON n."id_вид_работы" = w."id_вид_работы"
+JOIN "StavkaZaChas" st
+    ON w."id_ставки" = st."id_ставки";
+
+-- 2. Сумма выплат по каждому виду работ за каждый месяц
+CREATE VIEW "v4_VyplatyPoVidamRaboty" AS
+SELECT
+    DATE_TRUNC('month', "Дата_начисления")::DATE AS "Месяц",
+    "id_вид_работы",
+    "Вид_работы",
+    SUM("Количество_часов") AS "Всего_часов",
+    SUM("Сумма_выплаты") AS "Общая_сумма_выплат"
+FROM "v4_RaschetOplaty"
+GROUP BY
+    DATE_TRUNC('month', "Дата_начисления")::DATE,
+    "id_вид_работы",
+    "Вид_работы";
+
+-- 3. Ежемесячный заработок каждого сотрудника
+CREATE VIEW "v4_ZarabotokSotrudnikov" AS
+SELECT
+    DATE_TRUNC('month', "Дата_начисления")::DATE AS "Месяц",
+    "id_сотрудника",
+    "ФИО",
+    SUM("Сумма_выплаты") AS "Ежемесячный_заработок"
+FROM "v4_RaschetOplaty"
+GROUP BY
+    DATE_TRUNC('month', "Дата_начисления")::DATE,
+    "id_сотрудника",
+    "ФИО";
+
+-- 4. Поиск сотрудника с наибольшим стажем
+CREATE VIEW "v4_Samyj_Staryj_Sotrudnik" AS
+SELECT
+    "id_сотрудника",
+    "ФИО",
+    "Дата_устройства",
+    AGE(CURRENT_DATE, "Дата_устройства") AS "Стаж_работы"
+FROM "Sotrudnik"
+WHERE "Дата_устройства" = (
+    SELECT MIN("Дата_устройства")
+    FROM "Sotrudnik"
+);
+
+-- 5. Сумма налога, которую фирма платит каждый месяц
+CREATE VIEW "v4_NalogPoMesyacam" AS
+SELECT
+    DATE_TRUNC('month', "Дата_начисления")::DATE AS "Месяц",
+    SUM("Налог") AS "Общая_сумма_налога"
+FROM "Nachislenie"
+GROUP BY
+    DATE_TRUNC('month', "Дата_начисления")::DATE;
+
+-- 6. Сотрудники, заработок которых выше среднего
+CREATE VIEW "v4_ZarabotokVysheSrednego" AS
+WITH "Zarabotok" AS (
+    -- Считаем ежемесячный заработок сотрудников
+    SELECT
+        "Месяц",
+        "id_сотрудника",
+        "ФИО",
+        "Ежемесячный_заработок"
+    FROM "v4_ZarabotokSotrudnikov"
+),
+
+"Srednee" AS (
+    -- Находим средний заработок за каждый месяц
+    SELECT
+        *,
+        AVG("Ежемесячный_заработок")
+        OVER (PARTITION BY "Месяц") AS "Средний_заработок"
+    FROM "Zarabotok"
+)
+
+-- Выводим сотрудников, заработок которых выше среднего
+SELECT
+    "Месяц",
+    "id_сотрудника",
+    "ФИО",
+    "Ежемесячный_заработок",
+    "Средний_заработок"
+FROM "Srednee"
+WHERE "Ежемесячный_заработок" > "Средний_заработок";
+
+-- Часть 3. Проверка созданных представлений
+-- После выполнения кода выше выполни эти запросы, чтобы показать результаты преподавателю.
+-- 1. Выплаты по каждому виду работ за каждый месяц
+SELECT *
+FROM "v4_VyplatyPoVidamRaboty"
+ORDER BY "Месяц", "id_вид_работы";
+
+
+-- 2. Ежемесячный заработок сотрудников
+SELECT *
+FROM "v4_ZarabotokSotrudnikov"
+ORDER BY "Месяц", "ФИО";
+
+
+-- 3. Сотрудник с наибольшим стажем
+SELECT *
+FROM "v4_Samyj_Staryj_Sotrudnik";
+
+
+-- 4. Сумма налога по месяцам
+SELECT *
+FROM "v4_NalogPoMesyacam"
+ORDER BY "Месяц";
+
+
+-- 5. Сотрудники с заработком выше среднего
+SELECT *
+FROM "v4_ZarabotokVysheSrednego"
+ORDER BY "Месяц", "Ежемесячный_заработок" DESC;
